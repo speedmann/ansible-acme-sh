@@ -1,0 +1,53 @@
+---
+- name: Install git
+  package:
+    name: git
+    state: present
+- name: Get acme.sh
+  git:
+    repo: https://github.com/Neilpang/acme.sh
+    dest: /root/acme.sh
+- name: Install acme.sh
+  command: ./acme.sh --install
+  args:
+    chdir: /root/acme.sh
+    creates: /root/.acme.sh
+
+- name: ensure ACME_USER exists
+  user:
+    name: "{{ ACME_USER }}"
+    createhome: no
+    comment: The Lounge IRC
+    system: yes
+    state: present
+
+- name: ensure ACME_PATH dir exists
+  file:
+    dest: "{{ ACME_PATH }}"
+    owner: "{{ ACME_USER }}"
+    group: "{{ ACME_GROUP }}"
+    mode: 0700
+    state: directory
+
+- name: Issue cert
+  shell: export INWX_User={{ INWX_USER  }}; export INWX_Password={{ INWX_PASSWORD  }}; /root/.acme.sh/acme.sh --issue --dns dns_inwx -d {{ ACME_DOMAIN }}
+  args:
+    chdir: /root/acme.sh
+    creates: /root/.acme.sh/{{ ACME_DOMAIN }}/{{ ACME_DOMAIN }}.cer
+
+- name: Install cert
+  shell: ./acme.sh --install-cert -d {{ ACME_DOMAIN }} --key-file {{ ACME_PATH }}{{ ACME_DOMAIN }}.key  --fullchain-file {{ ACME_PATH }}{{ ACME_DOMAIN }}.pem
+  args:
+    chdir: /root/acme.sh
+    creates: "{{ ACME_PATH }}{{ ACME_DOMAIN }}.pem"
+
+- name: ensure permissions
+  file:
+    dest: "{{ ACME_PATH }}{{ ACME_DOMAIN }}.{{ item }}"
+    owner: "{{ ACME_USER }}"
+    group: "{{ ACME_GROUP }}"
+    mode: 0700
+    state: touch
+  with_items:
+    - key
+    - pem
