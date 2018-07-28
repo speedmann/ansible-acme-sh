@@ -1,6 +1,7 @@
 ---
 - name: Install git
   package:
+    update_cache: True
     name: git
     state: present
 - name: Get acme.sh
